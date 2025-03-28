@@ -23,3 +23,23 @@ go.work.sum
 
 # env file
 .env
+
+# Local terraform directories
+**/.terraform/*
+
+# terraform state files
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# terrafrom crash log files
+crash.log
+crash.*.log
+
+# Ignore terraform cli files
+.terraformrc
+terraform.rc
+
+# Ignore terraform var files as they may contain sensitive data
+*.tfvars
+*.tfvars.json
