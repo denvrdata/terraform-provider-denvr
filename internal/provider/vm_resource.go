@@ -202,10 +202,6 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 		resp.Diagnostics.AddError("Error creating server", err.Error())
 		return
 	}
-	if rsp == nil {
-		resp.Diagnostics.AddError("Error creating server", "response pointer is nil")
-		return
-	}
 	rspDump, err := httputil.DumpResponse(rsp, true)
 	if err != nil {
 		resp.Diagnostics.AddError("Error dumping response", err.Error())
@@ -286,16 +282,37 @@ func (r *vmResource) Update(ctx context.Context, req resource.UpdateRequest, res
 }
 
 func (r *vmResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	tflog.Debug(ctx, "Reading Terraform plan data into vmResourceModel")
 	var data vmResourceModel
-
-	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Delete API call logic
+	tflog.Debug(ctx, "Constructing virtual server request")
+	destroyParams := virtual.DestroyServerParams{
+		Id:        data.Id.ValueString(),
+		Namespace: data.Namespace.ValueString(),
+		Cluster:   data.Cluster.ValueString(),
+	}
+
+	tflog.Debug(ctx, "Constructing virtual machine service client")
+	client := virtual.NewClient()
+
+	tflog.Debug(ctx, "Making virtual machine deletion request")
+	server, err := client.DestroyServer(ctx, &destroyParams)
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting server", err.Error())
+		return
+	}
+
+	tflog.Debug(ctx, "Updating virtual machine resource state")
+	serverJson, err := json.MarshalIndent(server, "", "\t")
+	if err != nil {
+		resp.Diagnostics.AddError("Error marshaling server response", err.Error())
+		return
+	}
+	tflog.Debug(ctx, string(serverJson))
 }
 
 // ParseVirtualServerDetailsItemWithResult parses an HTTP response into a VirtualServerDetailsItem.
