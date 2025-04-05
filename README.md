@@ -1,6 +1,11 @@
 # terraform-provider-denvr
 A simple terraform provider for managing Denvr resources
 
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/denvrdata/terraform-provider-denvr/CI.yml)](https://github.com/denvrdata/terraform-provider-denvr/actions/workflows/CI.yml)
+[![Coveralls](https://img.shields.io/coverallsCoverage/github/denvrdata/terraform-provider-denvr)](https://coveralls.io/github/denvrdata/terraform-provider-denvr?branch=main)
+[![Denvr Dataworks Docs](https://img.shields.io/badge/denvr_cloud-docs-%234493c5?style=flat)](https://docs.denvrdata.com/docs)
+[![Denvr Dataworks Registration](https://img.shields.io/badge/denvr_cloud-registration-%234493c5?style=flat)](https://console.cloud.denvrdata.com/account/register-tenant)
+
 Given a simple terraform configuration, this provider can be used to create and manage Denvr resources.
 
 ## Example
