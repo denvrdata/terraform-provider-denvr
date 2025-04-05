@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Provider Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: true
+      matrix:
+        go-version: ["1.22", "1.23", "1.24"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+      - name: Test
+        env:
+          TF_ACC: "1"
+        run: go test --race --covermode atomic --coverprofile=full-report.cov ./...
+      - name: Trim coverage reporting for generated code
+        run: cat full-report.cov | grep -v ".gen.go" > report.cov
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.3.4
+        with:
+          file: report.cov
+          format: golang
