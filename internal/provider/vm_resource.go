@@ -3,9 +3,6 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"net/http"
-	"net/http/httputil"
 
 	"github.com/denvrdata/go-denvr/api/v1/servers/virtual"
 
@@ -195,23 +192,12 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 
 	tflog.Debug(ctx, "Constructing virtual machine service client")
 	client := virtual.NewClient()
+	tflog.Debug(ctx, client.Server)
 
 	tflog.Debug(ctx, "Making virtual machine creation request")
-	rsp, err := client.CreateServerRaw(ctx, serverReq)
+	server, err := client.CreateServer(ctx, serverReq)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating server", err.Error())
-		return
-	}
-	rspDump, err := httputil.DumpResponse(rsp, true)
-	if err != nil {
-		resp.Diagnostics.AddError("Error dumping response", err.Error())
-		return
-	}
-	tflog.Debug(ctx, string(rspDump))
-
-	server, err := ParseVirtualServerDetailsItem(rsp)
-	if err != nil {
-		resp.Diagnostics.AddError("Error parsing server response", err.Error())
+		resp.Diagnostics.AddError("Create server failed", err.Error())
 		return
 	}
 
@@ -222,6 +208,7 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 		return
 	}
 	tflog.Debug(ctx, string(serverJson))
+	//fmt.Println(string(serverJson))
 	data.GpuType = types.StringValue(*server.GpuType)
 	data.Gpus = types.Int32Value(*server.Gpus)
 	data.Id = types.StringValue(*server.Id)
@@ -313,29 +300,4 @@ func (r *vmResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 		return
 	}
 	tflog.Debug(ctx, string(serverJson))
-}
-
-// ParseVirtualServerDetailsItemWithResult parses an HTTP response into a VirtualServerDetailsItem.
-// TODO: Move this back into the virtual package
-func ParseVirtualServerDetailsItem(rsp *http.Response) (*virtual.VirtualServerDetailsItem, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	// Just panic for now if we get a 4xx or higher error
-	if 400 <= rsp.StatusCode {
-		panic(rsp.Status)
-	}
-
-	// If direct unmarshal fails, try checking for result key
-	var dest struct {
-		Result virtual.VirtualServerDetailsItem `json:"result"`
-	}
-	if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-		return nil, err
-	}
-
-	return &dest.Result, nil
 }
