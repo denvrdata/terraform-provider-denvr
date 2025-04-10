@@ -43,6 +43,9 @@ var TestVM = vmResourceModel{
 	TenancyName:                   types.StringValue("denvr"),
 	Username:                      types.StringValue("test@foobar.com"),
 	Vcpus:                         types.Int32Value(10),
+	Wait:                          types.BoolValue(true),
+	Interval:                      types.Int64Value(1),
+	Timeout:                       types.Int64Value(10),
 }
 
 var TestAuthResult = `
@@ -56,41 +59,46 @@ var TestAuthResult = `
 }
 `
 
-var TestVirtualServerResult = fmt.Sprintf(`
-{
-	"result": {
-		"gpu_type": "%s",
-		"gpus": %d,
-		"id": "%s",
-		"image": "%s",
-		"ip": "%s",
-		"memory": %d,
-		"namespace": "%s",
-		"privateIp": "%s",
-		"status": "%s",
-		"storage": %d,
-		"storageType": "%s",
-		"tenancy_name": "%s",
-		"username": "%s",
-		"vcpus": %d
-	}
+func makeVirtualServerResponse(desiredStatus string) string {
+	return fmt.Sprintf(
+		`
+		{
+			"result": {
+				"cluster": "%s",
+				"gpu_type": "%s",
+				"gpus": %d,
+				"id": "%s",
+				"image": "%s",
+				"ip": "%s",
+				"memory": %d,
+				"namespace": "%s",
+				"privateIp": "%s",
+				"status": "%s",
+				"storage": %d,
+				"storageType": "%s",
+				"tenancy_name": "%s",
+				"username": "%s",
+				"vcpus": %d
+			}
+		}
+		`,
+		TestVM.Cluster.ValueString(),
+		TestVM.GpuType.ValueString(),
+		TestVM.Gpus.ValueInt32(),
+		TestVM.Id.ValueString(),
+		TestVM.Image.ValueString(),
+		TestVM.Ip.ValueString(),
+		TestVM.Memory.ValueInt64(),
+		TestVM.Namespace.ValueString(),
+		TestVM.PrivateIp.ValueString(),
+		desiredStatus,
+		TestVM.Storage.ValueInt64(),
+		TestVM.StorageType.ValueString(),
+		TestVM.TenancyName.ValueString(),
+		TestVM.Username.ValueString(),
+		TestVM.Vcpus.ValueInt32(),
+	)
 }
-`,
-	TestVM.GpuType.ValueString(),
-	TestVM.Gpus.ValueInt32(),
-	TestVM.Id.ValueString(),
-	TestVM.Image.ValueString(),
-	TestVM.Ip.ValueString(),
-	TestVM.Memory.ValueInt64(),
-	TestVM.Namespace.ValueString(),
-	TestVM.PrivateIp.ValueString(),
-	TestVM.Status.ValueString(),
-	TestVM.Storage.ValueInt64(),
-	TestVM.StorageType.ValueString(),
-	TestVM.TenancyName.ValueString(),
-	TestVM.Username.ValueString(),
-	TestVM.Vcpus.ValueInt32(),
-)
 
 var resourceConfig = fmt.Sprintf(`
 resource "denvr_vm" "test" {
@@ -106,6 +114,9 @@ resource "denvr_vm" "test" {
 	persist_storage = %t
 	direct_storage_mount_path = "%s"
 	root_disk_size = %d
+	wait = %t
+	interval = %d
+	timeout = %d
 }
 `,
 	TestVM.Name.ValueString(),
@@ -120,9 +131,12 @@ resource "denvr_vm" "test" {
 	TestVM.PersistStorage.ValueBool(),
 	TestVM.DirectStorageMountPath.ValueString(),
 	TestVM.RootDiskSize.ValueInt32(),
+	TestVM.Wait.ValueBool(),
+	TestVM.Interval.ValueInt64(),
+	TestVM.Timeout.ValueInt64(),
 )
 
-func TestAccVMResource(t *testing.T) {
+func TestAccVMResource_basic(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc(
 		"/",
@@ -139,20 +153,42 @@ func TestAccVMResource(t *testing.T) {
 			resp.Write([]byte(TestAuthResult))
 		},
 	)
+
+	serverStatus := "na"
 	mux.HandleFunc(
 		"/api/v1/servers/virtual/CreateServer",
 		func(resp http.ResponseWriter, req *http.Request) {
 			//fmt.Println(TestVirtualServerResult)
+			serverStatus = "na"
 			resp.WriteHeader(http.StatusOK)
-			resp.Write([]byte(TestVirtualServerResult))
+			resp.Write([]byte(makeVirtualServerResponse(serverStatus)))
+		},
+	)
+	mux.HandleFunc(
+		"/api/v1/servers/virtual/GetServer",
+		func(resp http.ResponseWriter, req *http.Request) {
+			//fmt.Println(TestVirtualServerResult)
+			switch serverStatus {
+			case "na":
+				serverStatus = "PENDING"
+			case "PENDING":
+				serverStatus = "PENDING_RESOURCES"
+			case "PENDING_RESOURCES":
+				serverStatus = "PENDING_READINESS"
+			case "PENDING_READINESS":
+				serverStatus = "ONLINE"
+			}
+			resp.WriteHeader(http.StatusOK)
+			resp.Write([]byte(makeVirtualServerResponse(serverStatus)))
 		},
 	)
 	mux.HandleFunc(
 		"/api/v1/servers/virtual/DestroyServer",
 		func(resp http.ResponseWriter, req *http.Request) {
 			//fmt.Println(TestVirtualServerResult)
+			serverStatus = "na"
 			resp.WriteHeader(http.StatusOK)
-			resp.Write([]byte(TestVirtualServerResult))
+			resp.Write([]byte(makeVirtualServerResponse(serverStatus)))
 		},
 	)
 	server := httptest.NewServer(mux)
