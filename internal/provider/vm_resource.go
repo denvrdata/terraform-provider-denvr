@@ -3,12 +3,14 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/denvrdata/go-denvr/api/v1/servers/virtual"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -48,6 +50,9 @@ type vmResourceModel struct {
 	Username                       types.String `tfsdk:"username"`
 	Vcpus                          types.Int32  `tfsdk:"vcpus"`
 	Vpc                            types.String `tfsdk:"vpc"`
+	Wait                           types.Bool   `tfsdk:"wait"`
+	Interval                       types.Int64  `tfsdk:"interval"`
+	Timeout                        types.Int64  `tfsdk:"timeout"`
 }
 
 func NewVmResource() resource.Resource {
@@ -152,6 +157,21 @@ func (r *vmResource) Schema(ctx context.Context, req resource.SchemaRequest, res
 			"vpc": schema.StringAttribute{
 				Required: true,
 			},
+			"wait": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+			},
+			"interval": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				Default:  int64default.StaticInt64(30),
+			},
+			"timeout": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				Default:  int64default.StaticInt64(600),
+			},
 		},
 	}
 }
@@ -201,13 +221,42 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 		return
 	}
 
-	tflog.Debug(ctx, "Updating virtual machine resource state")
 	serverJson, err := json.MarshalIndent(server, "", "\t")
 	if err != nil {
 		resp.Diagnostics.AddError("Error marshaling server response", err.Error())
 		return
 	}
 	tflog.Debug(ctx, string(serverJson))
+	if data.Wait.ValueBool() {
+		tflog.Debug(ctx, "Waiting for virtual machine to be ready")
+		getParams := virtual.GetServerParams{
+			Id:        *server.Id,
+			Namespace: *server.Namespace,
+			Cluster:   *server.Cluster,
+		}
+
+		start := time.Now()
+		for {
+			if time.Since(start) > (time.Duration(data.Timeout.ValueInt64()) * time.Second) {
+				resp.Diagnostics.AddError("Timeout Error", "Waiting for VM to come \"ONLINE\" timed out")
+				return
+			}
+
+			server, err = client.GetServer(ctx, &getParams)
+			if err != nil {
+				resp.Diagnostics.AddError("Error checking server status", err.Error())
+				return
+			}
+
+			if *server.Status == "ONLINE" {
+				break
+			}
+
+			time.Sleep(time.Duration(data.Interval.ValueInt64()) * time.Second)
+		}
+	}
+
+	tflog.Debug(ctx, "Updating virtual machine resource state")
 	//fmt.Println(string(serverJson))
 	data.GpuType = types.StringValue(*server.GpuType)
 	data.Gpus = types.Int32Value(*server.Gpus)
