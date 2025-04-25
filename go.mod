@@ -44,7 +44,7 @@ require (
 )
 
 require (
-	github.com/denvrdata/go-denvr v0.0.0-20250404175624-9e6e97c854c5
+	github.com/denvrdata/go-denvr v0.1.0
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
@@ -69,4 +69,4 @@ require (
 	google.golang.org/protobuf v1.36.3 // indirect
 )
 
-//replace github.com/denvrdata/go-denvr => /Users/rory/repos/denvrdata/go-denvr
+// replace github.com/denvrdata/go-denvr => /Users/rory/repos/denvrdata/go-denvr
