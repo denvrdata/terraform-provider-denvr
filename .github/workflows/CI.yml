@@ -23,6 +23,15 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
+      - name: Check code formatting
+        run: if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then echo "Code is not formatted with gofmt. Run gofmt -w ."; exit 1; fi
+      - name: Check go mod tidy
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: -D errcheck -D staticcheck
       - name: Test
         env:
           TF_ACC: "1"
