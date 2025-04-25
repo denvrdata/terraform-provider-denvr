@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/denvrdata/go-denvr/api/v1/servers/virtual"
@@ -296,8 +298,52 @@ func (r *vmResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 	}
 
 	// Read API call logic
+	getParams := virtual.GetServerParams{
+		Id:        data.Id.ValueString(),
+		Namespace: data.Namespace.ValueString(),
+		Cluster:   data.Cluster.ValueString(),
+	}
 
-	// Save updated data into Terraform state
+	tflog.Debug(ctx, "Constructing virtual machine service client")
+	client := virtual.NewClient()
+
+	tflog.Debug(ctx, "Making virtual machine get request")
+	server, err := client.GetServer(ctx, &getParams)
+	if err != nil {
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", getParams.Id)) {
+			resp.State.RemoveResource(ctx)
+		} else {
+			resp.Diagnostics.AddError("Error getting server", err.Error())
+		}
+		return
+	}
+
+	tflog.Debug(ctx, "Updating virtual machine resource state")
+	//fmt.Println(string(serverJson))
+	data.GpuType = types.StringValue(*server.GpuType)
+	data.Gpus = types.Int32Value(*server.Gpus)
+	data.Id = types.StringValue(*server.Id)
+	data.Image = types.StringValue(*server.Image)
+	data.Ip = types.StringValue(*server.Ip)
+	data.Memory = types.Int64Value(*server.Memory)
+	data.Namespace = types.StringValue(*server.Namespace)
+	data.PrivateIp = types.StringValue(*server.PrivateIp)
+	data.Status = types.StringValue(*server.Status)
+	data.Storage = types.Int64Value(*server.Storage)
+	data.StorageType = types.StringValue(*server.StorageType)
+	data.TenancyName = types.StringValue(*server.TenancyName)
+	data.Username = types.StringValue(*server.Username)
+	data.Vcpus = types.Int32Value(*server.Vcpus)
+
+	tflog.Debug(ctx, "Handling optional Direct Attached Storage Persisted")
+	if server.DirectAttachedStoragePersisted != nil {
+		data.DirectAttachedStoragePersisted = types.BoolValue(*server.DirectAttachedStoragePersisted)
+	} else {
+		data.DirectAttachedStoragePersisted = types.BoolValue(false)
+	}
+
+	// Save data into Terraform state
+	tflog.Debug(ctx, "Saving updated virtual machine Terraform state ")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -338,7 +384,11 @@ func (r *vmResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 	tflog.Debug(ctx, "Making virtual machine deletion request")
 	server, err := client.DestroyServer(ctx, &destroyParams)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting server", err.Error())
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", destroyParams.Id)) {
+			resp.State.RemoveResource(ctx)
+		} else {
+			resp.Diagnostics.AddError("Error deleting server", err.Error())
+		}
 		return
 	}
 
