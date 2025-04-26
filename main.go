@@ -4,9 +4,12 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"terraform-provider-denvr/internal/provider"
+
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
+
+//go:generate go tool tfplugindocs generate --provider-dir . -provider-name denvr
 
 func main() {
 	opts := providerserver.ServeOpts{
