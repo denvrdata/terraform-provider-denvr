@@ -30,7 +30,7 @@ jobs:
       - name: Check go mod tidy
         run: go mod tidy && git diff --exit-code go.mod go.sum
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           args: -D errcheck -D staticcheck
