@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version: ["1.22", "1.23", "1.24"]
+        go-version: ["1.24"]
 
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +23,14 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
           cache: true
+      - name: Check docs are up-to-date
+        run: go generate . && git diff --exit-code
       - name: Check code formatting
         run: if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then echo "Code is not formatted with gofmt. Run gofmt -w ."; exit 1; fi
       - name: Check go mod tidy
         run: go mod tidy && git diff --exit-code go.mod go.sum
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           args: -D errcheck -D staticcheck
