@@ -312,31 +312,31 @@ func (r *appResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Read API call logic
-	// getParams := applications.GetApplicationDetailsParams{
-	// 	Id:      data.Id.ValueString(),
-	// 	Cluster: data.Cluster.ValueString(),
-	// }
+	getParams := applications.GetApplicationDetailsParams{
+		Id:      data.Id.ValueString(),
+		Cluster: data.Cluster.ValueString(),
+	}
 
-	// tflog.Debug(ctx, "Constructing application service client")
-	// client := applications.NewClient()
+	tflog.Debug(ctx, "Constructing application service client")
+	client := applications.NewClient()
 
-	// tflog.Debug(ctx, "Making applications get request")
-	// details, err := client.GetApplicationDetails(ctx, &getParams)
-	// if err != nil {
-	// 	if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", getParams.Id)) {
-	// 		resp.State.RemoveResource(ctx)
-	// 	} else {
-	// 		resp.Diagnostics.AddError("Error getting application", err.Error())
-	// 	}
-	// 	return
-	// }
+	tflog.Debug(ctx, "Making applications get request")
+	details, err := client.GetApplicationDetails(ctx, &getParams)
+	if err != nil {
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", getParams.Id)) {
+			resp.State.RemoveResource(ctx)
+		} else {
+			resp.Diagnostics.AddError("Error getting application", err.Error())
+		}
+		return
+	}
 
-	// tflog.Debug(ctx, "Updating application resource state")
-	// data = updateState(ctx, data, details)
+	tflog.Debug(ctx, "Updating application resource state")
+	data = updateState(ctx, data, *details.InstanceDetails)
 
-	// // Save data into Terraform state
+	// Save data into Terraform state
 	// tflog.Debug(ctx, "Saving updated virtual machine Terraform state ")
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *appResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -482,34 +482,39 @@ func updateState(ctx context.Context, data appResourceModel, info interface{}) a
 	var status, publicIp, privateIp, dns, createdBy, tenant *string
 	var persistDirectAttachedStorage, personalSharedStorage, tenantSharedStorage *bool
 
+	extractFields := func(
+		_id, _status, _publicIp, _privateIp, _dns, _createdBy, _tenant *string,
+		_persistDirectAttachedStorage, _personalSharedStorage, _tenantSharedStorage *bool) {
+		if _id != nil {
+			id = *_id
+		}
+
+		status = _status
+		publicIp = _publicIp
+		privateIp = _privateIp
+		dns = _dns
+		createdBy = _createdBy
+		tenant = _tenant
+		persistDirectAttachedStorage = _persistDirectAttachedStorage
+		personalSharedStorage = _personalSharedStorage
+		tenantSharedStorage = _tenantSharedStorage
+	}
+
 	// Check which type of info we received and extract fields accordingly
 	switch v := info.(type) {
 	case applications.ApplicationsApiOverview:
-		if v.Id != nil {
-			id = *v.Id
-		}
-		status = v.Status
-		publicIp = v.PublicIp
-		privateIp = v.PrivateIp
-		dns = v.Dns
-		createdBy = v.CreatedBy
-		tenant = v.Tenant
-		persistDirectAttachedStorage = v.PersistedDirectAttachedStorage
-		personalSharedStorage = v.PersonalSharedStorage
-		tenantSharedStorage = v.TenantSharedStorage
+		extractFields(
+			v.Id, v.Status, v.PublicIp, v.PrivateIp, v.Dns, v.CreatedBy, v.Tenant,
+			v.PersistedDirectAttachedStorage, v.PersonalSharedStorage, v.TenantSharedStorage,
+		)
 	case applications.InstanceDetails:
-		if v.Id != nil {
-			id = *v.Id
-		}
-		status = v.Status
-		publicIp = v.PublicIp
-		privateIp = v.PrivateIp
-		dns = v.Dns
-		createdBy = v.CreatedBy
-		tenant = v.Tenant
-		persistDirectAttachedStorage = v.PersistedDirectAttachedStorage
-		personalSharedStorage = v.PersonalSharedStorage
-		tenantSharedStorage = v.TenantSharedStorage
+		extractFields(
+			v.Id, v.Status, v.PublicIp, v.PrivateIp, v.Dns, v.CreatedBy, v.Tenant,
+			v.PersistedDirectAttachedStorage, v.PersonalSharedStorage, v.TenantSharedStorage,
+		)
+	default:
+		tflog.Error(ctx, fmt.Sprintf("Unexpected info type: %T", info))
+		return data
 	}
 
 	data.Id = types.StringValue(id)
