@@ -312,30 +312,30 @@ func (r *appResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 
 	// Read API call logic
-	getParams := applications.GetApplicationDetailsParams{
-		Id:      data.Id.ValueString(),
-		Cluster: data.Cluster.ValueString(),
-	}
+	// getParams := applications.GetApplicationDetailsParams{
+	// 	Id:      data.Id.ValueString(),
+	// 	Cluster: data.Cluster.ValueString(),
+	// }
 
-	tflog.Debug(ctx, "Constructing application service client")
-	client := applications.NewClient()
+	// tflog.Debug(ctx, "Constructing application service client")
+	// client := applications.NewClient()
 
-	tflog.Debug(ctx, "Making applications get request")
-	details, err := client.GetApplicationDetails(ctx, &getParams)
-	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", getParams.Id)) {
-			resp.State.RemoveResource(ctx)
-		} else {
-			resp.Diagnostics.AddError("Error getting application", err.Error())
-		}
-		return
-	}
+	// tflog.Debug(ctx, "Making applications get request")
+	// details, err := client.GetApplicationDetails(ctx, &getParams)
+	// if err != nil {
+	// 	if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", getParams.Id)) {
+	// 		resp.State.RemoveResource(ctx)
+	// 	} else {
+	// 		resp.Diagnostics.AddError("Error getting application", err.Error())
+	// 	}
+	// 	return
+	// }
 
-	tflog.Debug(ctx, "Updating application resource state")
-	data = updateState(ctx, data, details)
+	// tflog.Debug(ctx, "Updating application resource state")
+	// data = updateState(ctx, data, details)
 
-	// Save data into Terraform state
-	tflog.Debug(ctx, "Saving updated virtual machine Terraform state ")
+	// // Save data into Terraform state
+	// tflog.Debug(ctx, "Saving updated virtual machine Terraform state ")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
