@@ -11,11 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -46,6 +44,7 @@ type appResourceModel struct {
 	PersonalSharedStorage         types.Bool   `tfsdk:"personal_shared_storage"`
 	PrivateIp                     types.String `tfsdk:"private_ip"`
 	ProxyPort                     types.Int32  `tfsdk:"proxy_port"`
+	ReadinessWatcherPort          types.Int32  `tfsdk:"readiness_watcher_port"`
 	ResourcePool                  types.String `tfsdk:"resource_pool"`
 	SecurityContextContainerGid   types.Int32  `tfsdk:"security_context_container_gid"`
 	SecurityContextContainerUid   types.Int32  `tfsdk:"security_context_container_uid"`
@@ -75,13 +74,9 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 		Attributes: map[string]schema.Attribute{
 			"application_catalog_item_name": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"application_catalog_item_version": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"cluster": schema.StringAttribute{
 				Required: true,
@@ -106,28 +101,18 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"image_repository_hostname": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"image_repository_password": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"image_repository_username": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"image_url": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"jupyter_token": schema.StringAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString(""),
 			},
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -140,45 +125,34 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"persist_direct_attached_storage": schema.BoolAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
 			},
 			"personal_shared_storage": schema.BoolAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
 			},
 			"private_ip": schema.StringAttribute{
 				Computed: true,
 			},
 			"proxy_port": schema.Int32Attribute{
 				Optional: true,
-				Computed: true,
-				Default:  int32default.StaticInt32(-1),
+			},
+			"readiness_watcher_port": schema.Int32Attribute{
+				Optional: true,
 			},
 			"resource_pool": schema.StringAttribute{
 				Required: true,
 			},
 			"security_context_container_gid": schema.Int32Attribute{
 				Optional: true,
-				Computed: true,
-				Default:  int32default.StaticInt32(-1),
 			},
 			"security_context_container_uid": schema.Int32Attribute{
 				Optional: true,
-				Computed: true,
-				Default:  int32default.StaticInt32(-1),
 			},
 			"security_context_run_as_root": schema.BoolAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
 			},
 			"ssh_keys": schema.ListAttribute{
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
-				Default:     listdefault.StaticValue(types.ListValueMust(types.StringType, nil)),
 			},
 			"status": schema.StringAttribute{
 				Computed: true,
@@ -188,8 +162,6 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"tenant_shared_storage": schema.BoolAttribute{
 				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
 			},
 			"username": schema.StringAttribute{
 				Computed: true,
@@ -461,6 +433,8 @@ func createCustomApplication(ctx context.Context, client applications.Client, da
 		Name:                         data.Name.ValueString(),
 		PersistDirectAttachedStorage: data.PersistDirectAttachedStorage.ValueBoolPointer(),
 		PersonalSharedStorage:        data.PersonalSharedStorage.ValueBoolPointer(),
+		ProxyPort:                    data.ProxyPort.ValueInt32Pointer(),
+		ReadinessWatcherPort:         data.ReadinessWatcherPort.ValueInt32Pointer(),
 		ResourcePool:                 data.ResourcePool.ValueStringPointer(),
 		TenantSharedStorage:          data.TenantSharedStorage.ValueBoolPointer(),
 	}
