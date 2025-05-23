@@ -48,7 +48,7 @@ var TestVM = vmResourceModel{
 	Timeout:                       types.Int64Value(10),
 }
 
-var TestAuthResult = `
+var VMTestAuthResult = `
 {
 	"result": {
 		"accessToken": "access1",
@@ -150,7 +150,7 @@ func TestAccVMResource_basic(t *testing.T) {
 		"/api/TokenAuth/Authenticate",
 		func(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(http.StatusOK)
-			resp.Write([]byte(TestAuthResult))
+			resp.Write([]byte(VMTestAuthResult))
 		},
 	)
 
