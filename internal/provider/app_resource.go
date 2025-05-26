@@ -125,9 +125,13 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"persist_direct_attached_storage": schema.BoolAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
 			},
 			"personal_shared_storage": schema.BoolAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
 			},
 			"private_ip": schema.StringAttribute{
 				Computed: true,
@@ -162,6 +166,8 @@ func (r *appResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 			"tenant_shared_storage": schema.BoolAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
 			},
 			"username": schema.StringAttribute{
 				Computed: true,
@@ -258,6 +264,13 @@ func (r *appResource) Create(ctx context.Context, req resource.CreateRequest, re
 				resp.Diagnostics.AddError("Error checking application status", "Returned application instance status is nil")
 				return
 			}
+
+			detailsJson, err := json.MarshalIndent(*details.InstanceDetails, "", "\t")
+			if err != nil {
+				resp.Diagnostics.AddError("Error marshaling application details", err.Error())
+				return
+			}
+			tflog.Debug(ctx, string(detailsJson))
 
 			if *details.InstanceDetails.Status == "ONLINE" {
 				data = updateState(ctx, data, *details.InstanceDetails)
