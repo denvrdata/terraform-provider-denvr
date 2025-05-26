@@ -65,7 +65,7 @@ require (
 )
 
 require (
-	github.com/denvrdata/go-denvr v0.1.1
+	github.com/denvrdata/go-denvr v0.2.0
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
