@@ -1,0 +1,23 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+## Catalog Application
+
+{{ tffile (printf "examples/resources/%s/catalog.tf" .Name)}}
+
+## Custom Application
+
+{{ tffile (printf "examples/resources/%s/custom.tf" .Name)}}
+
+
+{{ .SchemaMarkdown | trimspace }}
