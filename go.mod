@@ -65,7 +65,7 @@ require (
 )
 
 require (
-	github.com/denvrdata/go-denvr v0.2.0
+	github.com/denvrdata/go-denvr v0.3.0
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
@@ -90,6 +90,6 @@ require (
 	google.golang.org/protobuf v1.36.3 // indirect
 )
 
-// replace github.com/denvrdata/go-denvr => /Users/rory/repos/denvrdata/go-denvr
+// replace github.com/denvrdata/go-denvr => /home/rory/repos/go-denvr
 
 tool github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
